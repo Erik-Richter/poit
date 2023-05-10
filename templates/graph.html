@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>POIT'2019</title>
+    <style type="text/css">           
+    </style>
+    <script src="static/libs/jquery-1.11.1.min.js"></script>
+    <script src="static/libs/plotly-latest.min.js"></script>
+    <script src='https://cdn.plot.ly/plotly-2.20.0.min.js'></script>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.5/socket.io.min.js"></script>
+   <script type="text/javascript" charset="utf-8">
+     $(document).ready(function() {
+      namespace = '/test';
+      var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+      var distances = new Array();
+      var distances2 = new Array();
+      var obstacles = new Array();
+      var servoSpeeds = new Array();
+      var counterArray = new Array();
+      var counter = -2;
+      socket.on('connect', function() {
+        socket.emit('my_event', {data: 'I\'m connected!', value: 1}); });
+
+      socket.on('my_response', function(msg) {
+        console.log(msg);
+
+        $('#log').append('Received = distance: '+msg.distance+' obstacle: ' +msg.obstacle + ' servo: '+ msg.servo +'<br>').html();
+        counter ++;
+        counterArray.push(counter);
+        distances.push(msg.distance/100);
+        distances2.push(msg.distance);
+        obstacles.push(msg.obstacle);
+        servoSpeeds.push(msg.servo);
+        
+        var distance = {
+          x: counterArray,
+          y: distances,
+          type: 'scatter',
+          name: 'Distance [meters]'
+        };
+
+        var obstacle = {
+          x: counterArray,
+          y: obstacles,
+          mode: 'lines',
+          line: {shape: 'hv'},
+          type: 'scatter',
+          name: 'Obstacle detector'
+        };
+        
+
+        
+        var servoSpeed = {
+          x: counterArray,
+          y: servoSpeeds,
+          type: 'scatter',
+          name: 'Servo speed'
+        };
+
+        var data = [distance, obstacle, servoSpeed];
+
+        Plotly.newPlot('myDiv', data);
+        
+        
+        var data = [
+        {
+          domain: { x: [0, 1], y: [0, 1] },
+          value: msg.servo,
+          title: { text: "Speed" },
+          type: "indicator",
+          mode: "gauge+number",
+          gauge: {
+      axis: { range: [null, 120] },
+      steps: [
+        { range: [0, 250], color: "lightgray" },
+        { range: [102, 120], color: "red" }
+      ],
+      threshold: {
+        line: { color: "red", width: 4 },
+        thickness: 1,
+        value: 101
+      }
+    }
+        }
+      ];
+
+      var layout = { width: 600, height: 500, margin: { t: 0, b: 0 } };
+      Plotly.newPlot('myDiv2', data, layout);
+      
+      
+      var data1 = [
+        {
+          type: "indicator",
+          mode: "number+gauge+delta",
+          gauge: { shape: "bullet" },
+          delta: { reference: distances2[distances2.length -2] },
+          value: msg.distance,
+          domain: { x: [0, 1], y: [0, 1] },
+          title: { text: "Distance" },
+           gauge: {
+              shape: "bullet",
+              axis: { range: [null, 404] },
+              threshold: {
+                line: { color: "red", width: 2 },
+                thickness: 0.75,
+                value: 400
+              },
+              steps: [
+                { range: [0, 404], color: "gray" },
+                { range: [2, 400], color: "lightgray" }
+              ]}
+        }
+      ];
+
+      var layout = { width: 1000, height: 250 };
+      Plotly.newPlot('myDiv3', data1, layout);
+        
+        
+        
+         });
+
+        
+        
+        
+        
+
+      $('form#emit').submit(function(event) {
+          socket.emit('my_event', {value: $('#emit_value').val()});
+          return false; });
+      $('#buttonVal').click(function(event) {
+          //console.log($('#buttonVal').val());
+          socket.emit('db_event', {value: $('#buttonVal').val()});
+          if ($(this).val() == "start") {
+            $(this).val("stop");
+            $(this).text("Stop");
+          }
+          else {
+            $(this).val("start");
+            $(this).text("Start");
+          }
+          return false; }); 
+      $('form#disconnect').submit(function(event) {
+          socket.emit('disconnect_request');
+          return false; });         
+      });
+    </script>
+
+  
+</head>
+<body>
+ 
+    <div id="myDiv" ></div>
+    <div id="myDiv2" ></div>
+    <div id="myDiv3" ></div>
+          <form action="javascript:;" onsubmit="changeFile(this)">
+        <label for="fname">Number of graph data</label><br>
+        <input type="text" id="num" name="num" value="1"><br>
+        <input type="submit" value="Submit">
+      </form> 
+      <div>LOG:</div>
+      <div id="log"></div>
+</body>
+</html> 
